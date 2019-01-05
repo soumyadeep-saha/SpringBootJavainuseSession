@@ -1,0 +1,208 @@
+SpringBootJavainuseSession
+
+Spring Boot + Session Management Hello World Example
+In this post we will be implementing Session Management using Spring Boot.
+First let us have a look at what is session management and how can it be accomplished.
+What is Session Management?
+
+We all know that HTTP is a stateless protocol. All requests and responses are independent. The server cannot distinguish between new visitors and returning visitors. But sometimes we may need to keep track of client's activity across multiple requests. This is achieved using Session Management. It is a mechanism used by the Web container to store session information for a particular user. 
+Session management can be achieved in one of the following ways-
+Cookies
+Hidden form field
+URL Rewriting
+HttpSession
+In this example we will be making use of HttpSession to achieve Session management. Also we will be using the Spring Session module
+Spring Session consists of the following modules:
+Spring Session Core - provides core Spring Session functionalities and APIs
+Spring Session Data Redis - provides SessionRepository and ReactiveSessionRepository implementation backed by Redis and configuration support
+Spring Session JDBC - provides SessionRepository implementation backed by a relational database and configuration support
+Spring Session Hazelcast - provides SessionRepository implementation backed by Hazelcast and configuration support
+In this post we will be using jdbc to store spring session information.
+Lets Begin-
+
+Maven Project will be as follows-
+
+ 
+
+In the Maven we need the Spring Session dependency.Maven will be as follows-
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.journaldev.spring</groupId>
+	<artifactId>Spring-Boot-Session-Example</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>Spring-Boot-Session-Example</name>
+	<description>Spring-Boot-Session-Example</description>
+
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>2.0.3.RELEASE</version>
+		<relativePath /> <!-- lookup parent from repository -->
+	</parent>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<java.version>8</java.version>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-jdbc</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-thymeleaf</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.session</groupId>
+			<artifactId>spring-session-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.session</groupId>
+			<artifactId>spring-session-jdbc</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+
+
+</project>
+
+ 
+Create the SpringBootHelloWorldApplication.java as below-
+package com.javainuse;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class SpringBootSessionApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(SpringBootSessionApplication.class, args);
+	}
+}
+
+ 
+Create the Employee model class as follows-
+package com.javainuse.controller;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+@Controller
+public class SpringSessionController {
+
+	@GetMapping("/")
+	public String process(Model model, HttpSession session) {
+		@SuppressWarnings("unchecked")
+		List<String> messages = (List<String>) session.getAttribute("MY_SESSION_MESSAGES");
+
+		if (messages == null) {
+			messages = new ArrayList<>();
+		}
+		model.addAttribute("sessionMessages", messages);
+
+		return "index";
+	}
+
+	@PostMapping("/persistMessage")
+	public String persistMessage(@RequestParam("msg") String msg, HttpServletRequest request) {
+		@SuppressWarnings("unchecked")
+		List<String> messages = (List<String>) request.getSession().getAttribute("MY_SESSION_MESSAGES");
+		if (messages == null) {
+			messages = new ArrayList<>();
+			request.getSession().setAttribute("MY_SESSION_MESSAGES", messages);
+		}
+		messages.add(msg);
+		request.getSession().setAttribute("MY_SESSION_MESSAGES", messages);
+		return "redirect:/";
+	}
+
+	@PostMapping("/destroy")
+	public String destroySession(HttpServletRequest request) {
+		request.getSession().invalidate();
+		return "redirect:/";
+	}
+}
+
+The application.properties will be as follows-
+spring.datasource.driver-class-name=com.mysql.jdbc.Driver
+spring.datasource.url=jdbc:mysql://localhost/springSession
+spring.datasource.username=root
+spring.datasource.password=root
+
+spring.h2.console.enabled=true
+
+spring.session.store-type=jdbc
+spring.session.jdbc.initialize-schema=always
+spring.session.timeout.seconds=900
+
+The index.html will be as follows-
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<title>Spring Boot Session Example</title>
+</head>
+<body>
+	<div>
+		<form th:action="@{/persistMessage}" method="post">
+			<textarea name="msg" cols="40" rows="2"></textarea>
+			<br> <input type="submit" value="Save Message" />
+		</form>
+	</div>
+	<div>
+		<h2>Messages</h2>
+		<ul th:each="message : ">
+			<li th:text="">msg</li>
+		</ul>
+	</div>
+	<div>
+		<form th:action="@{/destroy}" method="post">
+			<input type="submit" value="Destroy Session" />
+		</form>
+	</div>
+</body>
+</html>
+
+ 
+Compile and the run the SpringBootHelloWorldApplication.java as a Java application.
+Go to localhost:8080
+We can add the items to be stored in the session. The Spring session created 2 tables for storing session related information.
+The spring_session table is as follows-
+The spring_session_attributes table is as follows-
+Download Source Code
+Download it -
+Spring Boot + Session Management
